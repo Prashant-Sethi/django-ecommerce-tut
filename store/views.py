@@ -13,6 +13,8 @@ class HomeView(ListView):
     model = Item
     context_object_name = 'items'
 
+    paginate_by = 12
+
 
 class ItemDetailView(DetailView):
     model = Item

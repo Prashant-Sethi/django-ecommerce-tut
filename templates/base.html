@@ -6,7 +6,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <title>Material Design Bootstrap</title>
+    <title>{% block head_title %}{% endblock head_title %}</title>
+    {% block extra_head %}
+    {% endblock extra_head %}
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.11.2/css/all.css">
     <!-- Bootstrap core CSS -->
@@ -47,54 +49,7 @@
 </head>
 <body>
 
-    <!-- Navbar -->
-    <nav class="navbar fixed-top navbar-expand-lg navbar-light white scrolling-navbar">
-        <div class="container">
-
-        <!-- Brand -->
-        <a class="navbar-brand waves-effect" href="https://mdbootstrap.com/docs/jquery/" target="_blank">
-            <strong class="blue-text">DJ E-Commerce</strong>
-        </a>
-
-        <!-- Collapse -->
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
-            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <!-- Links -->
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-
-            <!-- Left -->
-            <ul class="navbar-nav mr-auto">
-            <li class="nav-item active">
-                <a class="nav-link waves-effect" href="{% url 'home-page' %}">Home
-                <span class="sr-only">(current)</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link waves-effect" href="{% url 'checkout-page' %}">Checkout</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link waves-effect" href="{% url 'home-page' %}">Products</a>
-            </li>
-            </ul>
-
-            <!-- Right -->
-            <ul class="navbar-nav nav-flex-icons">
-            <li class="nav-item">
-                <a class="nav-link waves-effect">
-                <span class="badge red z-depth-1 mr-1"> 1 </span>
-                <i class="fas fa-shopping-cart"></i>
-                <span class="clearfix d-none d-sm-inline-block"> Cart </span>
-                </a>
-            </li>
-            </ul>
-
-        </div>
-
-        </div>
-    </nav>
+    {% include 'navbar.html' %}
 
     <div class='mt-5 pt-4'>
         {% if messages %}
@@ -113,20 +68,14 @@
 
     {% endblock content %}
 
-    <!-- SCRIPTS -->
-    <!-- JQuery -->
-    <script type="text/javascript" src="{% static 'js/jquery-3.4.1.min.js' %}"></script>
-    <!-- Bootstrap tooltips -->
-    <script type="text/javascript" src="{% static 'js/popper.min.js' %}"></script>
-    <!-- Bootstrap core JavaScript -->
-    <script type="text/javascript" src="{% static 'js/bootstrap.min.js' %}"></script>
-    <!-- MDB core JavaScript -->
-    <script type="text/javascript" src="{% static 'js/mdb.min.js' %}"></script>
-    <!-- Initializations -->
-    <script type="text/javascript">
-    // Animations initialization
-        new WOW().init();
-    </script>
+    {% block extra_body %}
+    {% endblock extra_body %}
+
+    {% include 'footer.html' %}
+
+    {% include 'scripts.html' %}
+
+
 
 </body>
 </html>
