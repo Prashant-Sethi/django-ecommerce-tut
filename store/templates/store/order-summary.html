@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+
+{% block content %}
+
+    <!--Main layout-->
+    <main>
+        <div class="container">
+
+            <div class="table-responsive text-nowrap">
+                <h2>Order Summary</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Item Title</th>
+                            <th scope="col">Price</th>
+                            <th scope="col">Quantity</th>
+                            <th scope="col">Item Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order_item in order.items.all %}
+                            <tr>
+                                <th scope="row">{{ forloop.counter }}</th>
+                                <td>{{order_item.item.title}}</td>
+                                <td>$
+                                    {% if order_item.item.discount_price %}
+                                        <span class="mr-1">
+                                            <del>{{ order_item.item.price }}</del>
+                                        </span>
+                                        <span>{{ order_item.item.discount_price }}</span>
+                                    {% else %}
+                                        <span>{{ order_item.item.price }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'remove-item-from-cart' order_item.item.slug %}"><i class="fas fa-minus mr-2"></i></a>
+                                    {{order_item.quantity}}
+                                    <a href="{% url 'add-item-to-cart' order_item.item.slug %}"><i class="fas fa-plus ml-2"></i></a>
+                                </td>
+                                <td>$
+                                    {% if order_item.item.discount_price %}
+                                        {{ order_item.get_item_total_discount }}
+                                        <span class="badge badge-primary">Saving of $ {{ order_item.get_amount_saved }}</span>
+                                    {% else %}
+                                        {{ order_item.get_item_total }}
+                                    {% endif %}
+                                    <a href="{% url 'remove-at-checkout' order_item.item.slug %}" style='color: red'>
+                                        <i class="fas fa-trash float-right"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5">Your Cart is empty!</td>
+                            </tr>
+                            <tr>
+                                <td colspan="5">
+                                    <a href="{% url 'home-page' %}" class="btn btn-primary float-right ml-2">Continue Shopping</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                            {% if order.get_order_total %}
+                                <tr>
+                                    <th scope="col" colspan="4">Order Total</th>
+                                    <th scope="col">$ {{ order.get_order_total }}</th>
+                                </tr>
+                            {% endif %}
+                    </tbody>
+                </table>
+                {% if order.get_order_total %}
+                    <a href="/checkout/" class="btn btn-warning float-right">Proceed to Checkout</a>
+                    <a href="{% url 'home-page' %}" class="btn btn-primary float-right ml-2">Continue Shopping</a>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+    <!--Main layout-->
+
+{% endblock content %}
