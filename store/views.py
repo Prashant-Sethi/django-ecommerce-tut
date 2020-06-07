@@ -6,7 +6,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import ListView, DetailView, View
 from django.utils import timezone
 
-from .models import Item, Order, OrderItem
+from .forms import CheckoutForm
+from .models import Item, Order, OrderItem, BillingAddress
 
 # Create your views here.
 
@@ -34,16 +35,48 @@ class OrderSummaryView(LoginRequiredMixin, View):
             }
             return render(self.request, 'store/order-summary.html', context)
         except ObjectDoesNotExist:
-            messages.error(self.request, "You do not have an active order")
+            messages.warning(self.request, "You do not have an active order")
             return redirect('home-page')
 
 
-@login_required
-def checkout_page(request):
-    context = {}
-    #     'items': Item.objects.all()
-    # }
-    return render(request, 'store/checkout.html', context)
+class CheckoutView(LoginRequiredMixin, View):
+    def get(self, *args, **kwargs):
+        form = CheckoutForm()
+        context = {
+            'form': form
+        }
+        return render(self.request, 'store/checkout.html', context)
+
+    def post(self, *args, **kwargs):
+        form = CheckoutForm(self.request.POST or None)
+        try:
+            order = Order.objects.get(user=self.request.user, ordered=False)
+        except ObjectDoesNotExist:
+            messages.warning(self.request, "You do not have an active order")
+            return redirect('home-page')
+        if form.is_valid():
+            print('Form is valid')
+            street_address = form.cleaned_data.get('street_address')
+            apartment_address = form.cleaned_data.get('apartment_address')
+            country = form.cleaned_data.get('country')
+            zip_code = form.cleaned_data.get('zip_code')
+            # TODO: add functionality for these fields
+            # same_shipping_address = form.cleaned_data.get(
+            #     'same_shipping_address')
+            # save_info = form.cleaned_data.get('save_info')
+            payment_option = form.cleaned_data.get('payment_option')
+            billing_address = BillingAddress(
+                user=self.request.user,
+                street_address=street_address,
+                apartment_address=apartment_address,
+                country=country,
+                zip_code=zip_code
+            )
+            billing_address.save()
+            order.billing_address = billing_address
+            order.save()
+        messages.warning(self.request, 'Failed checkout')
+        return redirect('checkout-page')
 
 
 def add_order_item(request, slug):
