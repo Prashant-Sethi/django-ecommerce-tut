@@ -7,8 +7,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.generic import ListView, DetailView, View
 from django.utils import timezone
 
-from .forms import CheckoutForm
-from .models import Item, Order, OrderItem, BillingAddress, Payment
+from .forms import CheckoutForm, CouponForm
+from .models import Item, Order, OrderItem, BillingAddress, Payment, Coupon
 
 # Create your views here.
 
@@ -47,11 +47,16 @@ class OrderSummaryView(LoginRequiredMixin, View):
 class CheckoutView(LoginRequiredMixin, View):
     def get(self, *args, **kwargs):
         form = CheckoutForm()
-        order = Order.objects.get(user=self.request.user, ordered=False)
+        try:
+            order = Order.objects.get(user=self.request.user, ordered=False)
+        except ObjectDoesNotExist:
+            messages.warning(self.request, "You do not have an active order")
+            return redirect('home-page')
         context = {
             'form': form,
-            'order': order
-        }
+            'order': order,
+            'couponform': CouponForm(),
+            'DISPLAY_COUPON_FORM': True}
         return render(self.request, 'store/checkout.html', context)
 
     def post(self, *args, **kwargs):
@@ -62,7 +67,6 @@ class CheckoutView(LoginRequiredMixin, View):
             messages.warning(self.request, "You do not have an active order")
             return redirect('home-page')
         if form.is_valid():
-            print('Form is valid')
             street_address = form.cleaned_data.get('street_address')
             apartment_address = form.cleaned_data.get('apartment_address')
             country = form.cleaned_data.get('country')
@@ -98,11 +102,17 @@ class CheckoutView(LoginRequiredMixin, View):
 class PaymentView(LoginRequiredMixin, View):
     def get(self, *args, **kwargs):
         order = Order.objects.get(user=self.request.user, ordered=False)
-        context = {
-            'order': order,
-            'stripe_key': settings.STRIPE_PUBLIC_KEY
-        }
-        return render(self.request, 'store/payment.html', context)
+        if order.billing_address:
+            context = {
+                'order': order,
+                'stripe_key': settings.STRIPE_PUBLIC_KEY,
+                'DISPLAY_COUPON_FORM': False
+            }
+            return render(self.request, 'store/payment.html', context)
+        else:
+            messages.warning(self.request,
+                             'Please fill out the checkout form properly before proceeding to payment')
+            return redirect('checkout-page')
 
     def post(self, *args, **kwargs):
         order = Order.objects.get(
@@ -127,6 +137,11 @@ class PaymentView(LoginRequiredMixin, View):
             payment.amount = order.get_order_total()
             payment.save()
 
+            # update the ordered items
+            order_items = order.items.all()
+            order_items.update(ordered=True)
+            map(lambda item: item.save(), order_items)
+
             # assign the payment to the order
             order.ordered = True
             order.payment = payment
@@ -145,7 +160,6 @@ class PaymentView(LoginRequiredMixin, View):
 
         except stripe.error.InvalidRequestError as e:
             # Invalid parameters were supplied to Stripe's API
-            print(e)
             messages.error(self.request, 'Invalid parameters')
 
         except stripe.error.AuthenticationError as e:
@@ -249,3 +263,28 @@ def remove_single_item_from_cart(request, slug):
 def remove_item_at_checkout(request, slug):
     remove_order_item(request, slug)
     return redirect('order-summary-page')
+
+
+def get_coupon(request, code):
+    try:
+        return Coupon.objects.get(code=code)
+    except ObjectDoesNotExist:
+        messages.warning('Invalid coupon code')
+        return redirect(request, 'checkout-page')
+
+
+class AddCouponView(View):
+    def post(self, *args, **kwargs):
+        form = CouponForm(self.request.POST or None)
+        if form.is_valid():
+            try:
+                code = form.cleaned_data.get('code')
+                order = Order.objects.get(
+                    user=self.request.user, ordered=False)
+                order.coupon = Coupon.objects.get(code=code)
+                order.save()
+                messages.success(self.request, 'Successfully applied Coupon')
+            except ObjectDoesNotExist:
+                messages.warning(
+                    self.request, 'You do not have an active order')
+            return redirect('checkout-page')

@@ -61,12 +61,18 @@
                                 </td>
                             </tr>
                         {% endfor %}
-                            {% if order.get_order_total %}
-                                <tr>
-                                    <th scope="col" colspan="4">Order Total</th>
-                                    <th scope="col">$ {{ order.get_order_total }}</th>
+                        {% if order.coupon %}
+                            <tr>
+                                    <th scope="col" colspan="4" class="text-success">Promo code: {{ order.coupon.code }}</th>
+                                    <th scope="col">-$ {{ order.coupon.amount }}</th>
                                 </tr>
-                            {% endif %}
+                        {% endif %}
+                        {% if order.get_order_total %}
+                            <tr>
+                                <th scope="col" colspan="4">Order Total</th>
+                                <th scope="col">$ {{ order.get_order_total }}</th>
+                            </tr>
+                        {% endif %}
                     </tbody>
                 </table>
                 {% if order.get_order_total %}
