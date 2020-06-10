@@ -20,5 +20,7 @@ urlpatterns = [
     path('add_coupon/', views.AddCouponView.as_view(), name='add-coupon'),
     path('checkout/', views.CheckoutView.as_view(), name='checkout-page'),
     path('payment/<payment_option>/',
-         views.PaymentView.as_view(), name='payment-page')
+         views.PaymentView.as_view(), name='payment-page'),
+    path('request-refund/',
+         views.RequestRefundView.as_view(), name='request-refund')
 ]
