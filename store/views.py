@@ -8,7 +8,7 @@ from django.views.generic import ListView, DetailView, View
 from django.utils import timezone
 
 from .forms import CheckoutForm, CouponForm, RefundRequestForm
-from .models import Item, Order, OrderItem, BillingAddress, Payment, Coupon, Refund
+from .models import Item, Order, OrderItem, Address, Payment, Coupon, Refund
 import random
 import string
 
@@ -61,7 +61,29 @@ class CheckoutView(LoginRequiredMixin, View):
             'form': form,
             'order': order,
             'couponform': CouponForm(),
-            'DISPLAY_COUPON_FORM': True}
+            'DISPLAY_COUPON_FORM': True
+        }
+
+        shipping_address_qs = Address.objects.filter(
+            user=self.request.user,
+            address_type='S',
+            default=True
+        )
+
+        if shipping_address_qs.exists():
+            context.update(
+                {'default_shipping_address': shipping_address_qs[0]})
+
+        billing_address_qs = Address.objects.filter(
+            user=self.request.user,
+            address_type='B',
+            default=True
+        )
+
+        if billing_address_qs.exists():
+            context.update(
+                {'default_billing_address': billing_address_qs[0]})
+
         return render(self.request, 'store/checkout.html', context)
 
     def post(self, *args, **kwargs):
@@ -72,25 +94,119 @@ class CheckoutView(LoginRequiredMixin, View):
             messages.warning(self.request, "You do not have an active order")
             return redirect('home-page')
         if form.is_valid():
-            street_address = form.cleaned_data.get('street_address')
-            apartment_address = form.cleaned_data.get('apartment_address')
-            country = form.cleaned_data.get('country')
-            zip_code = form.cleaned_data.get('zip_code')
-            # TODO: add functionality for these fields
-            # same_shipping_address = form.cleaned_data.get(
-            #     'same_shipping_address')
-            # save_info = form.cleaned_data.get('save_info')
-            payment_option = form.cleaned_data.get('payment_option')
-            billing_address = BillingAddress(
-                user=self.request.user,
-                street_address=street_address,
-                apartment_address=apartment_address,
-                country=country,
-                zip_code=zip_code
-            )
-            billing_address.save()
+
+            use_default_shipping = form.cleaned_data.get(
+                'use_default_shipping')
+            if use_default_shipping:
+                print('Using the default shipping address')
+                shipping_address_qs = Address.objects.filter(
+                    user=self.request.user,
+                    address_type='S',
+                    default=True
+                )
+
+                if shipping_address_qs.exists():
+                    shipping_address = shipping_address_qs[0]
+                else:
+                    messages.info(
+                        self.request, 'You do not have saved a default shipping address')
+                    return redirect('checkout-page')
+            else:
+                print('User entered a new shipping address')
+
+                shipping_street_address = form.cleaned_data.get(
+                    'shipping_street_address')
+                shipping_apartment_address = form.cleaned_data.get(
+                    'shipping_apartment_address')
+                shipping_country = form.cleaned_data.get('shipping_country')
+                shipping_zip_code = form.cleaned_data.get('shipping_zip_code')
+
+                shipping_address = Address(
+                    user=self.request.user,
+                    street_address=shipping_street_address,
+                    apartment_address=shipping_apartment_address,
+                    country=shipping_country,
+                    zip_code=shipping_zip_code,
+                    address_type='S'
+                )
+
+                set_default_shipping = form.cleaned_data.get(
+                    'set_default_shipping')
+                if set_default_shipping:
+                    shipping_address_qs = Address.objects.filter(
+                        user=self.request.user,
+                        address_type='S',
+                        default=True
+                    )
+                    if shipping_address_qs.exists():
+                        shipping_address_qs.update(default=False)
+                    shipping_address.default = True
+
+                shipping_address.save()
+
+            same_billing_address = form.cleaned_data.get(
+                'same_billing_address')
+            if same_billing_address:
+                billing_address = shipping_address
+                billing_address.pk = None
+                billing_address.address_type = 'B'
+                billing_address.save()
+            else:
+                use_default_billing = form.cleaned_data.get(
+                    'use_default_billing')
+                if use_default_billing:
+                    print('Using the default billing address')
+                    billing_address_qs = Address.objects.filter(
+                        user=self.request.user,
+                        address_type='B',
+                        default=True
+                    )
+
+                    if billing_address_qs.exists():
+                        billing_address = billing_address_qs[0]
+                    else:
+                        messages.info(
+                            self.request, 'You do not have saved a default billing address')
+                        return redirect('checkout-page')
+                else:
+                    print('User entered a new billing address')
+
+                    billing_street_address = form.cleaned_data.get(
+                        'billing_street_address')
+                    billing_apartment_address = form.cleaned_data.get(
+                        'billing_apartment_address')
+                    billing_country = form.cleaned_data.get('billing_country')
+                    billing_zip_code = form.cleaned_data.get(
+                        'billing_zip_code')
+
+                    billing_address = Address(
+                        user=self.request.user,
+                        street_address=billing_street_address,
+                        apartment_address=billing_apartment_address,
+                        country=billing_country,
+                        zip_code=billing_zip_code,
+                        address_type='B'
+                    )
+
+                    set_default_billing = form.cleaned_data.get(
+                        'set_default_billing')
+                    if set_default_billing:
+                        billing_address_qs = Address.objects.filter(
+                        user=self.request.user,
+                        address_type='B',
+                        default=True
+                    )
+                    if billing_address_qs.exists():
+                        billing_address_qs.update(default=False)
+                    billing_address.default = True
+
+                    billing_address.save()
+
+            order.shipping_address = shipping_address
             order.billing_address = billing_address
             order.save()
+
+            payment_option = form.cleaned_data.get('payment_option')
 
             if payment_option == 'S':
                 return redirect('payment-page', payment_option='stripe')
