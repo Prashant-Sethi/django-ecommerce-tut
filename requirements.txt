@@ -24,7 +24,7 @@ Pillow==7.1.2
 psycopg2==2.8.5
 pycodestyle==2.6.0
 pycparser==2.20
-PyJWT==1.7.1
+PyJWT==2.4.0
 pyOpenSSL==19.1.0
 PySocks==1.7.1
 python-decouple==3.2
